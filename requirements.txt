@@ -1,0 +1,9 @@
+flask
+torch
+torchvision
+segmentation-models-pytorch
+opencv-python-headless
+numpy
+scipy
+scikit-learn
+scikit-image

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nail Screening</title>
+<style>
+:root{--bg:#fafaf9;--card:#fff;--ink:#1c1917;--mut:#78716c;--line:#e7e5e4;--acc:#be185d;--ok:#15803d;--warn:#b45309;--bad:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#161413;--card:#1f1c1b;--ink:#f5f5f4;--mut:#a8a29e;--line:#34302e;--acc:#f472b6;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:22px;margin:0}.sub{color:var(--mut);margin:4px 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0 0 12px}
+ol{margin:0;padding-left:20px}li{margin:6px 0}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:32px 16px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.on{border-color:var(--acc)}
+.drop p{margin:0;color:var(--mut)}
+#prev{display:none;max-width:100%;max-height:320px;border-radius:10px;margin:0 auto}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+button{font:inherit;border-radius:10px;padding:10px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--acc)}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600;flex:1}
+button:disabled{opacity:.45;cursor:not-allowed}
+label.chk{display:flex;gap:8px;align-items:flex-start;margin-top:14px;color:var(--mut);font-size:14px}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:600;border:1px solid currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.imgs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.imgs figure{margin:0}.imgs img{width:100%;border-radius:10px;background:#000;display:block}
+figcaption{font-size:12px;color:var(--mut);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}td{padding:6px 0;border-top:1px solid var(--line)}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;border:1px solid var(--line)}
+.flag{border-left:3px solid var(--warn);padding:2px 12px;margin:10px 0}.flag b{display:block}.flag small{color:var(--mut);display:block}
+.note{font-size:13px;color:var(--mut)}
+.spin{display:none;text-align:center;color:var(--mut);padding:12px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>Nail Screening</h1>
+  <p class="sub">Upload a photo of one nail for a quick colour-based health screen.</p>
+
+  <section class="card">
+    <h2>Before you capture</h2>
+    <ol>
+      <li>Wash hands before taking the image.</li>
+      <li>Capture individual nails clearly.</li>
+      <li>Avoid taking pictures directly under a tubelight or with flash to minimize reflections.</li>
+      <li>Avoid applying nail paint, mehndi, or other products before image capture.</li>
+      <li>Do not use fake/artificial nails.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Your photo</h2>
+    <div class="drop" id="drop">
+      <img id="prev" alt="Selected nail photo">
+      <p id="hint">Drag a photo here, or tap to choose</p>
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <input type="file" id="cam" accept="image/*" capture="environment" hidden>
+    <label class="chk"><input type="checkbox" id="agree"> I have followed the instructions above.</label>
+    <div class="row">
+      <button id="pick" type="button">Choose file</button>
+      <button id="snap" type="button">Take photo</button>
+      <button id="reset" type="button" disabled>Reset</button>
+      <button id="go" class="p" type="button" disabled>Analyze</button>
+    </div>
+  </section>
+
+  <div class="spin" id="spin">Analyzing…</div>
+
+  <section class="card hidden" id="out">
+    <h2>Result</h2>
+    <div id="verdict"></div>
+    <div class="imgs hidden" id="imgs">
+      <figure><img id="ov" alt="Detected nail"><figcaption>Detected nail</figcaption></figure>
+      <figure><img id="cr" alt="Isolated nail"><figcaption>Isolated nail</figcaption></figure>
+    </div>
+    <div id="body"></div>
+    <p class="note">Screening aid only, not a diagnosis. Consult a doctor for confirmatory tests.</p>
+  </section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let file=null;
+const sync=()=>{$("go").disabled=!(file&&$("agree").checked);$("reset").disabled=!file};
+function setFile(f){
+  if(!f||!f.type.startsWith("image/"))return;
+  file=f;$("prev").src=URL.createObjectURL(f);$("prev").style.display="block";$("hint").style.display="none";
+  $("out").classList.add("hidden");sync();
+}
+$("drop").onclick=$("pick").onclick=()=>$("file").click();
+$("snap").onclick=()=>$("cam").click();
+$("file").onchange=e=>setFile(e.target.files[0]);
+$("cam").onchange=e=>setFile(e.target.files[0]);
+$("agree").onchange=sync;
+["dragover","dragenter"].forEach(t=>$("drop").addEventListener(t,e=>{e.preventDefault();$("drop").classList.add("on")}));
+["dragleave","drop"].forEach(t=>$("drop").addEventListener(t,e=>{e.preventDefault();$("drop").classList.remove("on")}));
+$("drop").addEventListener("drop",e=>setFile(e.dataTransfer.files[0]));
+$("reset").onclick=()=>{file=null;$("file").value=$("cam").value="";$("prev").style.display="none";$("hint").style.display="block";$("agree").checked=false;$("out").classList.add("hidden");sync()};
+
+const row=(k,v)=>`<tr><td>${k}</td><td>${v}</td></tr>`;
+function show(verdictCls,verdictTxt,html,d){
+  $("verdict").innerHTML=`<span class="badge ${verdictCls}">${verdictTxt}</span>`;
+  $("body").innerHTML=html;
+  $("imgs").classList.toggle("hidden",!d);
+  if(d){$("ov").src=d.overlay;$("cr").style.display=d.crop?"block":"none";if(d.crop)$("cr").src=d.crop}
+  $("out").classList.remove("hidden");$("out").scrollIntoView({behavior:"smooth"});
+}
+$("go").onclick=async()=>{
+  $("go").disabled=true;$("spin").style.display="block";$("out").classList.add("hidden");
+  try{
+    const fd=new FormData();fd.append("image",file);
+    const r=await fetch("/api/analyze",{method:"POST",body:fd});
+    const d=await r.json();
+    if(!r.ok)return show("bad","Error",`<p>${d.error||"Something went wrong."}</p>`);
+    const q=d.quality;
+    const qt=`<table>${row("Sharpness",q.blur.toFixed(0))}${row("Glare",q.glare_pct.toFixed(1)+"%")}${row("Brightness",q.brightness.toFixed(0))}</table>`;
+    if(d.status==="rejected")
+      return show("bad","Photo rejected",`<ul>${q.problems.map(p=>`<li>${p}</li>`).join("")}</ul><p>Please retake the photo.</p>${qt}`);
+    if(d.status==="retake")
+      return show("warn","Retake needed",`<div class="flag"><b>We could not find a clear nail in this photo</b><small>${d.reasons.join("; ")}.</small></div><p>Place the finger on a plain, evenly coloured surface (white paper works well), fill the frame with the fingertip, use soft daylight, and try again.</p>${qt}`,d.overlay?{overlay:d.overlay,crop:null}:null);
+    const f=d.features;let html="";
+    if(d.cosmetic.suspected)
+      html+=`<div class="flag"><b>Possible nail polish / mehndi</b><small>${d.cosmetic.reasons.join(", ")}. Please retake with a bare nail.</small></div>`;
+    else if(d.flags.length)
+      html+=d.flags.map(x=>`<div class="flag"><b>${x.title}</b>${x.meaning}<small>Suggested tests: ${x.tests}</small></div>`).join("");
+    else html+=`<p>No colour-based risk detected. This does not guarantee good health.</p>`;
+    if(!d.nail_found)html+=`<p class="note">Nail could not be located precisely (${d.method}); check the preview and retake if wrong.</p>`;
+    html+=`<table>${row("Mean colour",`<span class="sw" style="background:rgb(${f.R|0},${f.G|0},${f.B|0})"></span>RGB ${f.R|0}, ${f.G|0}, ${f.B|0}`)}`+
+      `${row("HSV",`${f.H.toFixed(0)}°, ${f.S.toFixed(0)}, ${f.V.toFixed(0)}`)}${row("LAB",`${f.L.toFixed(1)}, ${f.a.toFixed(1)}, ${f.b.toFixed(1)}`)}${row("Detection",d.method)}</table>`;
+    const bad=d.cosmetic.suspected;
+    show(bad?"warn":d.flags.length?"warn":"ok",bad?"Retake advised":d.flags.length?"Possible risk":"Looks normal",html,d);
+  }catch(e){show("bad","Error","<p>Could not reach the server.</p>")}
+  finally{$("spin").style.display="none";sync()}
+};
+</script>
+</body>
+</html>
